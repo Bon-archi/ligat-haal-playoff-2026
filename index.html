@@ -40,7 +40,6 @@
         .share-btn { width: 100%; padding: 12px; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
         .whatsapp { background: #25d366; }
         .telegram { background: #0088cc; }
-        .screenshot-btn { background: #6366f1; }
     </style>
 </head>
 <body>
@@ -71,7 +70,6 @@
     <div class="share-container">
         <a id="wa-link" href="#" class="share-btn whatsapp">🟢 שיתוף בוואטסאפ</a>
         <a id="tg-link" href="#" class="share-btn telegram">🔵 שיתוף בטלגרם</a>
-        <button onclick="prepareForScreenshot()" class="share-btn screenshot-btn">📸 הכנה לצילום מסך (אינסטגרם)</button>
     </div>
 </div>
 
@@ -97,76 +95,3 @@
 
     function render() {
         const list = document.getElementById('fixture-list');
-        matches.forEach((m, i) => {
-            if (i % 3 === 0) {
-                const h = document.createElement('div');
-                h.className = 'round-header';
-                h.innerText = `מחזור ${m.r}`;
-                list.appendChild(h);
-            }
-            const d = document.createElement('div');
-            d.className = 'match';
-            d.innerHTML = `
-                <span style="flex:1; text-align:right;">${teams.find(t => t.id === m.h).name}</span>
-                <input type="number" id="h${i}" oninput="calc()" placeholder="0">
-                <span style="margin:0 5px;">:</span>
-                <input type="number" id="a${i}" oninput="calc()" placeholder="0">
-                <span style="flex:1; text-align:left;">${teams.find(t => t.id === m.a).name}</span>
-            `;
-            list.appendChild(d);
-        });
-        calc();
-    }
-
-    function calc() {
-        let current = JSON.parse(JSON.stringify(teams));
-        matches.forEach((m, i) => {
-            const hVal = document.getElementById(`h${i}`).value;
-            const aVal = document.getElementById(`a${i}`).value;
-            if (hVal !== "" && aVal !== "") {
-                const sH = parseInt(hVal), sA = parseInt(aVal);
-                const tH = current.find(t => t.id === m.h), tA = current.find(t => t.id === m.a);
-                tH.g++; tA.g++; tH.gf += sH; tH.ga += sA; tA.gf += sA; tA.ga += sH;
-                if (sH > sA) tH.pts += 3; else if (sA > sH) tA.pts += 3; else { tH.pts += 1; tA.pts += 1; }
-            }
-        });
-        current.sort((a, b) => (b.pts - a.pts) || ((b.gf - b.ga) - (a.gf - a.ga)));
-        const body = document.getElementById('league-body');
-        body.innerHTML = '';
-        current.forEach((t, i) => {
-            const row = document.createElement('tr');
-            if (i === 0) row.className = 'first-place';
-            row.innerHTML = `<td>${i+1}</td><td style="text-align:right;"><span class="color-strip ${t.class}"></span>${t.name}</td><td>${t.g}</td><td>${t.gf-t.ga}</td><td>${t.pts}</td>`;
-            body.appendChild(row);
-        });
-
-        // עדכון לינקים לשיתוף
-        const winner = current[0].name;
-        const url = window.location.href;
-        const text = encodeURIComponent(`בדקתי במחשבון האליפות וזו הטבלה שלי! האלופה שלי היא ${winner}. בואו תנסו גם: ${url}`);
-        document.getElementById('wa-link').href = `https://api.whatsapp.com/send?text=${text}`;
-        document.getElementById('tg-link').href = `https://telegram.me/share/url?url=${url}&text=${text}`;
-        
-        if (matches.every((_, i) => document.getElementById(`h${i}`).value !== "" && document.getElementById(`a${i}`).value !== "") && !window.shown) {
-            window.shown = true;
-            document.getElementById('champion-display').innerText = winner;
-            document.getElementById('winner-modal').style.display = 'block';
-            document.getElementById('overlay').style.display = 'block';
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        }
-    }
-
-    function prepareForScreenshot() {
-        window.scrollTo(0, document.body.scrollHeight);
-        alert("הטבלה מוכנה!  📸");
-    }
-
-    function closeModal() {
-        document.getElementById('winner-modal').style.display = 'none';
-        document.getElementById('overlay').style.display = 'none';
-    }
-
-    window.onload = render;
-</script>
-</body>
-</html>
