@@ -6,7 +6,6 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-EN28FNWBEQ');
     </script>
     
@@ -55,7 +54,7 @@
 </head>
 <body>
 
-<div class="overlay" id="overlay"></div>
+<div class="overlay" id="overlay" onclick="closeModal()"></div>
 <div id="winner-modal">
     <h2>🏆 האלופה שלך היא:</h2>
     <div class="champion-name" id="champion-display"></div>
@@ -110,6 +109,7 @@
 
     function render() {
         const list = document.getElementById('fixture-list');
+        list.innerHTML = '';
         let r = 0;
         matches.forEach((m, i) => {
             if (m.r !== r) {
@@ -137,11 +137,11 @@
         let current = JSON.parse(JSON.stringify(teams));
         let completed = 0;
         matches.forEach((m, i) => {
-            const hVal = document.getElementById(`h${i}`).value;
-            const aVal = document.getElementById(`a${i}`).value;
-            if (hVal !== "" && aVal !== "") {
+            const hInp = document.getElementById(`h${i}`);
+            const aInp = document.getElementById(`a${i}`);
+            if (hInp && aInp && hInp.value !== "" && aInp.value !== "") {
                 completed++;
-                const sH = parseInt(hVal); const sA = parseInt(aVal);
+                const sH = parseInt(hInp.value); const sA = parseInt(aInp.value);
                 const tH = current.find(t => t.id === m.h);
                 const tA = current.find(t => t.id === m.a);
                 tH.g++; tA.g++;
@@ -156,27 +156,31 @@
         current.sort((a, b) => (b.pts - a.pts) || ((b.gf - b.ga) - (a.gf - a.ga)) || (b.gf - a.gf));
 
         const body = document.getElementById('league-body');
-        body.innerHTML = '';
-        current.forEach((t, i) => {
-            const diff = t.gf - t.ga;
-            const row = document.createElement('tr');
-            if (i === 0) row.className = 'first-place';
-            row.innerHTML = `
-                <td>${i+1}</td>
-                <td style="text-align:right; font-weight:bold;"><span class="color-strip ${t.class}"></span>${t.name}</td>
-                <td>${t.g}</td>
-                <td>${diff > 0 ? '+' : ''}${diff}</td>
-                <td style="color:var(--primary); font-weight:bold;">${t.pts}</td>
-            `;
-            body.appendChild(row);
-        });
+        if (body) {
+            body.innerHTML = '';
+            current.forEach((t, i) => {
+                const diff = t.gf - t.ga;
+                const row = document.createElement('tr');
+                if (i === 0) row.className = 'first-place';
+                row.innerHTML = `
+                    <td>${i+1}</td>
+                    <td style="text-align:right; font-weight:bold;"><span class="color-strip ${t.class}"></span>${t.name}</td>
+                    <td>${t.g}</td>
+                    <td>${diff > 0 ? '+' : ''}${diff}</td>
+                    <td style="color:var(--primary); font-weight:bold;">${t.pts}</td>
+                `;
+                body.appendChild(row);
+            });
+        }
 
         const winner = current[0].name;
-        const url = "https://bon-archi.github.io/ligat-haal-playoff-2026/";
+        const url = window.location.href;
         const text = encodeURIComponent(`🏆 טירוף הפלייאוף! האלופה שלי היא ${winner}.\nבואו לבדוק במחשבון מי האלופה שלכם ואיך הטבלה נראית:\n`);
         
-        document.getElementById('wa-link').href = `https://api.whatsapp.com/send?text=${text}${encodeURIComponent(url)}`;
-        document.getElementById('tg-link').href = `https://telegram.me/share/url?url=${encodeURIComponent(url)}&text=${text}`;
+        const wa = document.getElementById('wa-link');
+        const tg = document.getElementById('tg-link');
+        if (wa) wa.href = `https://api.whatsapp.com/send?text=${text}${encodeURIComponent(url)}`;
+        if (tg) tg.href = `https://telegram.me/share/url?url=${encodeURIComponent(url)}&text=${text}`;
 
         if (completed === matches.length && !hasWon) {
             hasWon = true;
@@ -185,12 +189,23 @@
     }
 
     function showWinner(name) {
-        document.getElementById('champion-display').innerText = name;
-        document.getElementById('winner-modal').style.display = 'block';
-        document.getElementById('overlay').style.display = 'block';
-        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        const display = document.getElementById('champion-display');
+        const modal = document.getElementById('winner-modal');
+        const overlay = document.getElementById('overlay');
+        if (display && modal && overlay) {
+            display.innerText = name;
+            modal.style.display = 'block';
+            overlay.style.display = 'block';
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        }
     }
 
     function closeModal() {
         document.getElementById('winner-modal').style.display = 'none';
         document.getElementById('overlay').style.display = 'none';
+    }
+
+    window.onload = render;
+</script>
+</body>
+</html>
