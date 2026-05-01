@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון אליפות 2026 - הגרסה הרשמית</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --primary: #1a237e; --accent: #ffd700; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 10px; direction: rtl; text-align: center; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; }
+        h1 { color: var(--primary); margin-bottom: 5px; font-size: 24px; }
+        .round-header { background: var(--primary); color: white; padding: 8px; margin: 20px 0 10px; border-radius: 8px; font-size: 14px; font-weight: bold; }
+        .match { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+        .team-name { flex: 1; font-size: 14px; font-weight: 600; }
+        input { width: 45px; height: 35px; text-align: center; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 18px; font-weight: bold; color: var(--primary); transition: 0.2s; }
+        input:focus { border-color: var(--primary); outline: none; background: #f0f7ff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 25px; font-size: 13px; }
+        th { background: #f1f5f9; padding: 10px; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 500; transition: all 0.4s ease-in-out; }
+        
+        .color-strip { display: inline-block; width: 12px; height: 18px; margin-left: 8px; vertical-align: middle; border-radius: 2px; border: 1px solid #ddd; }
+        .strip-beitar { background: linear-gradient(to bottom, #ffd700 50%, #000000 50%); }
+        .strip-bs { background: #d32f2f; }
+        .strip-maccabi { background: linear-gradient(to bottom, #1e88e5 50%, #ffd700 50%); }
+        .strip-hapoel { background: #b71c1c; }
+        .strip-haifa { background: #2e7d32; }
+        .strip-pt { background: #1565c0; }
+
+        tr.first-place td { background: #fffbeb; font-weight: 800; color: #b45309; }
+
+        #winner-modal { 
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 30px; border-radius: 25px; box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            z-index: 1000; width: 85%; max-width: 350px; border: 4px solid var(--accent);
+        }
+        #winner-modal .champion-name { font-size: 32px; font-weight: 900; margin: 15px 0; color: #b45309; }
+        #winner-modal button { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 999; }
+        .share-btn { width: 100%; padding: 15px; background: #25d366; color: white; border: none; border-radius: 12px; margin-top: 25px; cursor: pointer; font-weight: bold; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<div class="overlay" id="overlay"></div>
+<div id="winner-modal">
+    <h2>🏆 האלופה שלך היא:</h2>
+    <div class="champion-name" id="champion-display"></div>
+    <p>איזו עונה מטורפת! שתפו את הטבלה עם חברים</p>
+    <button onclick="closeModal()">סגור וצלם מסך</button>
+</div>
+
+<div class="container">
+    <h1>⚽ מחשבון אליפות 2026</h1>
+    <p style="font-size: 13px; color: #64748b;">הזינו את תוצאות המחזורים האחרונים:</p>
+    <div id="fixture-list"></div>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th style="text-align:right">קבוצה</th>
+                <th>מש'</th>
+                <th>הפרש</th>
+                <th>נק'</th>
+            </tr>
+        </thead>
+        <tbody id="league-body"></tbody>
+    </table>
+    <button class="share-btn" onclick="window.print()">📸 צלמו ושתפו את הטבלה!</button>
+</div>
+
+<script>
+    const teams = [
+        { id: 'beitar', name: "בית\"ר ירושלים", pts: 64, g: 29, gf: 69, ga: 32, class: 'strip-beitar' },
+        { id: 'bs', name: "הפועל באר שבע", pts: 63, g: 29, gf: 63, ga: 28, class: 'strip-bs' },
+        { id: 'maccabi', name: "מכבי תל אביב", pts: 58, g: 29, gf: 60, ga: 33, class: 'strip-maccabi' },
+        { id: 'hapoel', name: "הפועל תל אביב", pts: 55, g: 29, gf: 51, ga: 27, class: 'strip-hapoel' },
+        { id: 'haifa', name: "מכבי חיפה", pts: 42, g: 29, gf: 51, ga: 38, class: 'strip-haifa' },
+        { id: 'pt', name: "הפועל פתח תקווה", pts: 37, g: 29, gf: 42, ga: 43, class: 'strip-pt' }
+    ];
+
+    const matches = [
+        { h: 'pt', a: 'haifa', r: 30 }, { h: 'bs', a: 'hapoel', r: 30 }, { h: 'beitar', a: 'maccabi', r: 30 },
+        { h: 'maccabi', a: 'pt', r: 31 }, { h: 'hapoel', a: 'beitar', r: 31 }, { h: 'haifa', a: 'bs', r: 31 },
+        { h: 'bs', a: 'pt', r: 32 }, { h: 'beitar', a: 'haifa', r: 32 }, { h: 'maccabi', a: 'hapoel', r: 32 },
+        { h: 'hapoel', a: 'pt', r: 33 }, { h: 'beitar', a: 'bs', r: 33 }, { h: 'haifa', a: 'maccabi', r: 33 },
+        { h: 'haifa', a: 'pt', r: 34 }, { h: 'hapoel', a: 'bs', r: 34 }, { h: 'maccabi', a: 'beitar', r: 34 },
+        { h: 'beitar', a: 'pt', r: 35 }, { h: 'maccabi', a: 'bs', r: 35 }, { h: 'hapoel', a: 'haifa', r: 35 },
+        { h: 'maccabi', a: 'pt', r: 36 }, { h: 'hapoel', a: 'beitar', r: 36 }, { h: 'haifa', a: 'bs', r: 36 }
+    ];
+
+    let hasWon = false;
+
+    function render() {
+        const list = document.getElementById('fixture-list');
+        let r = 0;
+        matches.forEach((m, i) => {
+            if (m.r !== r) {
+                r = m.r;
+                const h = document.createElement('div');
+                h.className = 'round-header';
+                h.innerText = `מחזור ${r}`;
+                list.appendChild(h);
+            }
+            const d = document.createElement('div');
+            d.className = 'match';
+            d.innerHTML = `
+                <span class="team-name" style="text-align:right">${teams.find(t => t.id === m.h).name}</span>
+                <input type="number" id="h${i}" oninput="calc()" placeholder="0" min="0">
+                <span style="font-weight:bold; margin:0 5px;">:</span>
+                <input type="number" id="a${i}" oninput="calc()" placeholder="0" min="0">
+                <span class="team-name" style="text-align:left">${teams.find(t => t.id === m.a).name}</span>
+            `;
+            list.appendChild(d);
+        });
+        calc();
+    }
+
+    function calc() {
+        let current = JSON.parse(JSON.stringify(teams));
+        let completed = 0;
+        matches.forEach((m, i) => {
+            const hVal = document.getElementById(`h${i}`).value;
+            const aVal = document.getElementById(`a${i}`).value;
+            if (hVal !== "" && aVal !== "") {
+                completed++;
+                const sH = parseInt(hVal); const sA = parseInt(aVal);
+                const tH = current.find(t => t.id === m.h);
+                const tA = current.find(t => t.id === m.a);
+                tH.g++; tA.g++;
+                tH.gf += sH; tH.ga += sA;
+                tA.gf += sA; tA.ga += sH;
+                if (sH > sA) tH.pts += 3;
+                else if (sA > sH) tA.pts += 3;
+                else { tH.pts += 1; tA.pts += 1; }
+            }
+        });
+
+        current.sort((a, b) => (b.pts - a.pts) || ((b.gf - b.ga) - (a.gf - a.ga)) || (b.gf - a.gf));
+
+        const body = document.getElementById('league-body');
+        body.innerHTML = '';
+        current.forEach((t, i) => {
+            const diff = t.gf - t.ga;
+            const row = document.createElement('tr');
+            if (i === 0) row.className = 'first-place';
+            row.innerHTML = `
+                <td>${i+1}</td>
+                <td style="text-align:right; font-weight:bold;"><span class="color-strip ${t.class}"></span>${t.name}</td>
+                <td>${t.g}</td>
+                <td>${diff > 0 ? '+' : ''}${diff}</td>
+                <td style="color:var(--primary); font-weight:bold;">${t.pts}</td>
+            `;
+            body.appendChild(row);
+        });
+
+        if (completed === matches.length && !hasWon) {
+            hasWon = true;
+            showWinner(current[0].name);
+        }
+    }
+
+    function showWinner(name) {
+        document.getElementById('champion-display').innerText = name;
+        document.getElementById('winner-modal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+    }
+
+    function closeModal() {
+        document.getElementById('winner-modal').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+    }
+
+    window.onload = render;
+</script>
+</body>
+</html>
